@@ -1,0 +1,77 @@
+{
+  "hero": {
+    "logo": "CV Management System",
+    "subtitle": "Best ATS Platform",
+    "title_1": "Manage, filter",
+    "title_2": "and hire the",
+    "title_3": "best talent",
+    "description": "Built for recruiters and candidates. Streamline your hiring process, manage dynamic attributes, and find the perfect match faster than ever.",
+    "cta_button": "Find out more",
+    "dashboard_mockup": "Dashboard Mockup"
+  },
+  "login": "Log in",
+  "signup": "Sign up",
+  "cta": {
+    "title_1": "Subscribe to get latest",
+    "title_2": "news and platform updates",
+    "placeholder": "Your email",
+    "button": "Subscribe"
+  },
+  "features": {
+    "subtitle": "Category",
+    "title": "We Offer Best Features",
+    "f1_title": "Smart Filtering",
+    "f1_desc": "Automatically sort and filter candidates based on custom requirements and skills.",
+    "f2_title": "Dynamic Attributes",
+    "f2_desc": "Add custom fields to resumes and job descriptions to fit your hiring workflow.",
+    "f3_title": "Fast Analytics",
+    "f3_desc": "Get real-time insights and reports on your recruitment pipeline status.",
+    "f4_title": "Secure Data",
+    "f4_desc": "Enterprise-grade security to keep candidate and company data safe and private."
+  },
+  "footer": {
+    "logo": "CV.System",
+    "description": "Manage your candidates in minutes, get full control over the hiring process.",
+    "platform": "Platform",
+    "for_recruiters": "For Recruiters",
+    "for_candidates": "For Candidates",
+    "pricing": "Pricing",
+    "company": "Company",
+    "about_us": "About Us",
+    "careers": "Careers",
+    "contact": "Contact",
+    "social": "Social",
+    "rights": "All rights reserved © 2026 CV Management System"
+  },
+  "positions": {
+    "subtitle": "Top Trending",
+    "title": "Most Popular Positions",
+    "pos1_title": "Senior React Developer",
+    "pos2_title": "Backend Java Engineer",
+    "pos3_title": "UX/UI Designer"
+  },
+  "steps": {
+    "subtitle": "Easy and Fast",
+    "title": "Build Your Team In 3 Easy Steps",
+    "s1_title": "Create a Job Post",
+    "s1_desc": "Define role requirements and necessary tech stack elements quickly.",
+    "s2_title": "Collect CVs & Filter",
+    "s2_desc": "Receive applications and filter top candidates using automated tools.",
+    "s3_title": "Hire Best Match",
+    "s3_desc": "Schedule interviews and onboard the ideal candidate seamlessly.",
+    "mockup": {
+      "role": "Senior React Developer",
+      "posted": "Posted today by HR Team",
+      "status_label": "Matching Status",
+      "status_value": "85% Compatibility"
+    }
+  },
+  "testimonials": {
+    "subtitle": "Testimonials",
+    "title": "What HR Managers Say About Us.",
+    "t1_quote": "This platform completely transformed our hiring pipeline. We cut down time-to-hire by half!",
+    "t1_name": "Sarah Jenkins",
+    "t1_role": "Head of HR",
+    "t1_company": "TechCorp"
+  }
+}
