@@ -1,7 +1,7 @@
-import { Outlet, Link, useNavigate } from "react-router-dom";
+import { Outlet, Link, useNavigate} from "react-router-dom";
 import { useState } from "react";
 import { UserButton } from "@clerk/clerk-react";
-import { Search, LayoutDashboard, Briefcase, FileText, User, Users } from "lucide-react";
+import { Search, LayoutDashboard, Briefcase, FileText, User, Users, Tag } from "lucide-react";
 import { useUserProfile } from "../context/UserProfileContext";
 import { api } from "../util/api";
 
@@ -19,6 +19,7 @@ const DashboardLayout = () => {
     const navItems = [
         { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, show: true },
         { to: "/dashboard/positions", label: "Positions", icon: Briefcase, show: true },
+        { to: "/dashboard/attributes", label: "Attribute Library", icon: Tag, show: isRecruiter || isAdmin },
         { to: "/dashboard/cvs", label: "My CVs", icon: FileText, show: !isRecruiter && !isAdmin },
         { to: "/dashboard/profile", label: "Profile", icon: User, show: !isRecruiter },
         { to: "/dashboard/admin/users", label: "Admin", icon: Users, show: isAdmin },

@@ -1,48 +1,37 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-    User,
     Mail,
     Shield,
     Save,
-    FolderPlus,
     Calendar,
-    Tag,
     Trash2,
     Edit2,
     Plus,
-    X,
-    CheckCircle2,
-    Sparkles,
-    Briefcase
+    X
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { api } from "../util/api";
+import TagAutocompleteInput from "../components/common/TagAutocompleteInput";
 
 const Profile = () => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState("general");
-
+    const [activeTab, setActiveTab] = useState("projects");
     const [userData, setUserData] = useState({ firstName: "", lastName: "", email: "" });
     const [savingUser, setSavingUser] = useState(false);
-
-
     const [projects, setProjects] = useState([]);
     const [showProjectModal, setShowProjectModal] = useState(false);
     const [editingProject, setEditingProject] = useState(null);
     const [projectForm, setProjectForm] = useState({
-        name: "",
-        description: "",
-        periodStart: "",
-        periodEnd: "",
-        tags: ""
+        name: "", description: "", periodStart: "", periodEnd: "", tags: []
     });
-
 
     const [profileValues, setProfileValues] = useState([]);
     const [allAttributes, setAllAttributes] = useState([]);
     const [newValAttributeId, setNewValAttributeId] = useState("");
     const [newValValue, setNewValValue] = useState("");
+
+    const selectedAttr = allAttributes.find((a) => a.id === Number(newValAttributeId));
 
 
     const loadProfileData = useCallback(async () => {
@@ -56,6 +45,7 @@ const Profile = () => {
                 lastName: userDataObj.lastName || "",
                 email: userDataObj.email || ""
             });
+
 
             if (userDataObj.clerkId) {
                 const [pvRes, projRes, attrRes] = await Promise.allSettled([
@@ -88,6 +78,8 @@ const Profile = () => {
             toast.success("Profile details updated successfully!");
         } catch (e) {
             toast.error("Failed to update profile details.");
+            console.log(user.clerkId)
+            console.log(userData)
         } finally {
             setSavingUser(false);
         }
@@ -102,22 +94,19 @@ const Profile = () => {
                 description: proj.description || "",
                 periodStart: proj.periodStart || "",
                 periodEnd: proj.periodEnd || "",
-                tags: proj.tags ? proj.tags.join(", ") : ""
+                tags: proj.tags || [],
+                version: proj.version,
             });
         } else {
             setEditingProject(null);
-            setProjectForm({ name: "", description: "", periodStart: "", periodEnd: "", tags: "" });
+            setProjectForm({ name: "", description: "", periodStart: "", periodEnd: "", tags: [] });
         }
         setShowProjectModal(true);
     };
 
     const handleSaveProject = async (e) => {
         e.preventDefault();
-        const payload = {
-            ...projectForm,
-            tags: projectForm.tags ? projectForm.tags.split(",").map((t) => t.trim()).filter(Boolean) : []
-        };
-
+        const payload = { ...projectForm };
         try {
             if (editingProject) {
                 await api.projects.update(editingProject.id, payload);
@@ -130,7 +119,11 @@ const Profile = () => {
             const projRes = await api.projects.getMine();
             setProjects(projRes.data || []);
         } catch (e) {
-            toast.error("Failed to save project.");
+            if (e.response?.status === 409) {
+                toast.error("This project was updated elsewhere — refresh and try again.");
+            } else {
+                toast.error("Failed to save project.");
+            }
         }
     };
 
@@ -153,18 +146,38 @@ const Profile = () => {
             return;
         }
 
+        const attr = allAttributes.find((a) => a.id === Number(newValAttributeId));
+        if (!attr) return;
+
+        const basePayload = { attributeId: Number(newValAttributeId) };
+        let payload;
+
+        switch (attr.dataType) {
+            case "ENUM":
+                payload = { ...basePayload, optionId: Number(newValValue) };
+                break;
+            case "NUMERIC":
+                payload = { ...basePayload, numericValue: Number(newValValue) };
+                break;
+            case "BOOLEAN":
+                payload = { ...basePayload, booleanValue: newValValue === "true" };
+                break;
+            case "DATE":
+                payload = { ...basePayload, dateValue: newValValue };
+                break;
+            default:
+                payload = { ...basePayload, stringValue: newValValue };
+        }
+
         try {
-            await api.profileValues.save(user.clerkId, {
-                attributeId: Number(newValAttributeId),
-                stringValue: newValValue
-            });
+            await api.profileValues.save(user.clerkId, payload);
             toast.success("Profile value saved!");
             setNewValAttributeId("");
             setNewValValue("");
             const pvRes = await api.profileValues.getByClerkId(user.clerkId);
             setProfileValues(pvRes.data || []);
         } catch (e) {
-            toast.error("Failed to save profile value.");
+            toast.error(e.response?.data || "Failed to save profile value.");
         }
     };
 
@@ -207,39 +220,36 @@ const Profile = () => {
 
             {/* Navigation Tabs */}
             <div className="flex border-b border-gray-200 space-x-6 text-sm font-medium">
-                <button
+                {/* <button
                     onClick={() => setActiveTab("general")}
-                    className={`pb-3 transition-all ${
-                        activeTab === "general"
-                            ? "border-b-2 border-amber-500 text-amber-600 font-semibold"
-                            : "text-gray-400 hover:text-gray-600"
-                    }`}
+                    className={`pb-3 transition-all ${activeTab === "general"
+                        ? "border-b-2 border-amber-500 text-amber-600 font-semibold"
+                        : "text-gray-400 hover:text-gray-600"
+                        }`}
                 >
                     Personal Details
-                </button>
+                </button> */}
                 <button
                     onClick={() => setActiveTab("projects")}
-                    className={`pb-3 transition-all ${
-                        activeTab === "projects"
-                            ? "border-b-2 border-amber-500 text-amber-600 font-semibold"
-                            : "text-gray-400 hover:text-gray-600"
-                    }`}
+                    className={`pb-3 transition-all ${activeTab === "projects"
+                        ? "border-b-2 border-amber-500 text-amber-600 font-semibold"
+                        : "text-gray-400 hover:text-gray-600"
+                        }`}
                 >
                     My Projects ({projects.length})
                 </button>
                 <button
                     onClick={() => setActiveTab("attributes")}
-                    className={`pb-3 transition-all ${
-                        activeTab === "attributes"
-                            ? "border-b-2 border-amber-500 text-amber-600 font-semibold"
-                            : "text-gray-400 hover:text-gray-600"
-                    }`}
+                    className={`pb-3 transition-all ${activeTab === "attributes"
+                        ? "border-b-2 border-amber-500 text-amber-600 font-semibold"
+                        : "text-gray-400 hover:text-gray-600"
+                        }`}
                 >
                     Profile Values ({profileValues.length})
                 </button>
             </div>
 
-            {/* TAB 1: GENERAL DETAILS */}
+            {/* TAB 1: GENERAL DETAILS
             {activeTab === "general" && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6">
                     <h2 className="text-lg font-bold text-navy-900 border-b border-gray-100 pb-3">Basic Information</h2>
@@ -287,7 +297,7 @@ const Profile = () => {
                         </button>
                     </form>
                 </div>
-            )}
+            )} */}
 
             {/* TAB 2: MY PROJECTS */}
             {activeTab === "projects" && (
@@ -377,7 +387,7 @@ const Profile = () => {
                             <label className="text-xs font-semibold text-navy-900">Select Attribute</label>
                             <select
                                 value={newValAttributeId}
-                                onChange={(e) => setNewValAttributeId(e.target.value)}
+                                onChange={(e) => { setNewValAttributeId(e.target.value); setNewValValue(""); }}
                                 className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-amber-500 bg-white"
                             >
                                 <option value="">-- Choose attribute --</option>
@@ -391,13 +401,35 @@ const Profile = () => {
 
                         <div className="flex-1 space-y-1">
                             <label className="text-xs font-semibold text-navy-900">Value</label>
-                            <input
-                                type="text"
-                                value={newValValue}
-                                onChange={(e) => setNewValValue(e.target.value)}
-                                placeholder="Value..."
-                                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-amber-500 bg-white"
-                            />
+                            {!selectedAttr ? (
+                                <input disabled placeholder="Select an attribute first"
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-gray-50 text-gray-400" />
+                            ) : selectedAttr.dataType === "ENUM" ? (
+                                <select value={newValValue} onChange={(e) => setNewValValue(e.target.value)}
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white">
+                                    <option value="">-- Select value --</option>
+                                    {selectedAttr.options?.map((o) => (
+                                        <option key={o.id} value={o.id}>{o.value}</option>
+                                    ))}
+                                </select>
+                            ) : selectedAttr.dataType === "BOOLEAN" ? (
+                                <select value={newValValue} onChange={(e) => setNewValValue(e.target.value)}
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white">
+                                    <option value="">-- Select --</option>
+                                    <option value="true">Yes</option>
+                                    <option value="false">No</option>
+                                </select>
+                            ) : selectedAttr.dataType === "NUMERIC" ? (
+                                <input type="number" value={newValValue} onChange={(e) => setNewValValue(e.target.value)}
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+                            ) : selectedAttr.dataType === "DATE" ? (
+                                <input type="date" value={newValValue} onChange={(e) => setNewValValue(e.target.value)}
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+                            ) : (
+                                <input type="text" value={newValValue} onChange={(e) => setNewValValue(e.target.value)}
+                                    placeholder="Value..."
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+                            )}
                         </div>
 
                         <button
@@ -412,20 +444,36 @@ const Profile = () => {
                         {profileValues.length === 0 ? (
                             <p className="text-xs text-gray-400 py-4 text-center">No profile values set yet.</p>
                         ) : (
-                            profileValues.map((pv) => (
-                                <div key={pv.attributeId} className="pt-3 flex items-center justify-between">
-                                    <div>
-                                        <div className="text-xs font-semibold text-navy-900">{pv.attributeName || `Attribute #${pv.attributeId}`}</div>
-                                        <div className="text-sm text-gray-700">{pv.stringValue || pv.numericValue || "N/A"}</div>
+                            profileValues.map((pv) => {
+                                const displayValue =
+                                    pv.stringValue ??
+                                    pv.optionValue ??
+                                    pv.numericValue ??
+                                    (pv.booleanValue !== null && pv.booleanValue !== undefined
+                                        ? (pv.booleanValue ? "Yes" : "No")
+                                        : null) ??
+                                    pv.dateValue ??
+                                    (pv.periodStart ? `${pv.periodStart} — ${pv.periodEnd || "Present"}` : null) ??
+                                    pv.imageUrl ??
+                                    "N/A";
+
+                                return (
+                                    <div key={pv.attributeId} className="pt-3 flex items-center justify-between">
+                                        <div>
+                                            <div className="text-xs font-semibold text-navy-900">
+                                                {pv.attributeName || `Attribute #${pv.attributeId}`}
+                                            </div>
+                                            <div className="text-sm text-gray-700">{displayValue}</div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleRemoveProfileValue(pv.attributeId)}
+                                            className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
                                     </div>
-                                    <button
-                                        onClick={() => handleRemoveProfileValue(pv.attributeId)}
-                                        className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 </div>
@@ -490,13 +538,10 @@ const Profile = () => {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-semibold text-navy-900 mb-1">Tags (comma separated)</label>
-                                <input
-                                    type="text"
-                                    value={projectForm.tags}
-                                    onChange={(e) => setProjectForm({ ...projectForm, tags: e.target.value })}
-                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-amber-500"
-                                    placeholder="React, Java, Spring Boot"
+                                <label className="block text-xs font-semibold text-navy-900 mb-1">Tags</label>
+                                <TagAutocompleteInput
+                                    tags={projectForm.tags}
+                                    onChange={(tags) => setProjectForm({ ...projectForm, tags })}
                                 />
                             </div>
 

@@ -14,10 +14,10 @@ public interface AttributeRepository extends JpaRepository<Attribute, Long> {
     boolean existsByName(String name);
 
     @Query("""
-        SELECT a FROM Attribute a
-        WHERE (:categoryId IS NULL OR a.category.id = :categoryId)
-          AND (:prefix IS NULL OR LOWER(a.name) LIKE LOWER(CONCAT(:prefix, '%')))
-        ORDER BY a.name ASC
-        """)
+    SELECT a FROM Attribute a
+    WHERE (:categoryId IS NULL OR a.category.id = :categoryId)
+      AND (:prefix = '' OR LOWER(a.name) LIKE LOWER(CONCAT(:prefix, '%')))
+    ORDER BY a.name ASC
+    """)
     List<Attribute> search(@Param("categoryId") Long categoryId, @Param("prefix") String prefix);
 }

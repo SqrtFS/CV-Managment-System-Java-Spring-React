@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 public interface PositionMapper {
 
     @Mapping(source = "createdBy.id", target = "createdByUserId")
+    @Mapping(source = "public", target = "isPublic")
     @Mapping(target = "relevantProjectTags", expression = "java(tagsToNames(entity.getRelevantProjectTags()))")
     PositionDto toDto(Position entity);
 

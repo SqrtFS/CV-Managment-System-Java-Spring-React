@@ -8,6 +8,7 @@ export const UserProfileProvider = ({ children }) => {
   const { isSignedIn, isLoaded } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -26,7 +27,7 @@ export const UserProfileProvider = ({ children }) => {
         setProfile(null);
       })
       .finally(() => setLoading(false));
-  }, [isSignedIn, isLoaded]);
+  }, [isSignedIn, isLoaded , reloadKey]);
 
   const isRecruiter = profile?.role === "RECRUITER";
   const isAdmin = profile?.role === "ADMIN";
@@ -34,7 +35,7 @@ export const UserProfileProvider = ({ children }) => {
 
   return (
     <UserProfileContext.Provider
-      value={{ profile, loading, isRecruiter, isAdmin, isCandidate, refetch: () => setLoading(true) }}
+      value={{ profile, loading, isRecruiter, isAdmin, isCandidate, refetch: () => setReloadKey((k) => k + 1) }}
     >
       {children}
     </UserProfileContext.Provider>

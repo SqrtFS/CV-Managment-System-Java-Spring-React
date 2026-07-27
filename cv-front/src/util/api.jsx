@@ -57,6 +57,7 @@ export const api = {
 
   positions: {
     getAll: (params) => client.get("/positions", { params }),
+    getCvs: (id) => client.get(`/cvs/${id}/cvs`),
     getLatest: () => client.get("/positions/latest"),
     getById: (id) => client.get(`/positions/${id}`),
     create: (dto) => client.post("/positions", dto),

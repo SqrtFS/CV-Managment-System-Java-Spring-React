@@ -35,6 +35,10 @@ public class UserService {
     @Transactional
     public UserResponseDto createUser(UserRequestDto userDto) {
         try {
+            if (userDto.getClerkId() == null || userDto.getClerkId().isBlank()) {
+                throw new IllegalArgumentException("clerkId is required when creating a user");
+            }
+
             User user = userMapper.toEntity(userDto);
 
             if (user.getRole() == null) {
@@ -69,12 +73,11 @@ public class UserService {
 
     @Transactional
     public void deleteUser(String clerkId) {
-        long deleted = userRepository.deleteByClerkId(clerkId);
-        if (deleted == 0) {
-            throw new UsernameNotFoundException("User not found with clerkId: " + clerkId);
-        }
-    }
+        User user = userRepository.findByClerkId(clerkId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with clerkId: " + clerkId));
 
+        userRepository.delete(user);
+    }
     public UserResponseDto getByClerkId(String clerkId) {
         User user = userRepository.findByClerkId(clerkId)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + clerkId));

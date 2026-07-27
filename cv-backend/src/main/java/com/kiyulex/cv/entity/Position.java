@@ -28,6 +28,7 @@ public class Position {
     @Enumerated(EnumType.STRING)
     private PositionLevel level;
 
+
     private boolean isPublic = true;
     private Integer maxProjects = 3;
 

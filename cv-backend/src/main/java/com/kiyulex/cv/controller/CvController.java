@@ -1,6 +1,7 @@
 package com.kiyulex.cv.controller;
 
 import com.kiyulex.cv.dto.*;
+import com.kiyulex.cv.entity.CvStatus;
 import com.kiyulex.cv.entity.User;
 import com.kiyulex.cv.repository.UserRepository;
 import com.kiyulex.cv.service.CvService;
@@ -93,6 +94,13 @@ public class CvController {
     public ResponseEntity<Map<String, Long>> unlike(@PathVariable Long id, Authentication authentication) {
         long count = likeService.unlike(id, resolveCurrentUserId(authentication));
         return ResponseEntity.ok(Map.of("likesCount", count));
+    }
+
+    @PreAuthorize("hasRole('RECRUITER')")
+    @GetMapping("/{positionId}/cvs")
+    public ResponseEntity<List<CvDto>> getCvsByPosition(@PathVariable Long positionId) {
+        List<CvDto> cvs = cvService.getCvsByPositionAndStatus(positionId, CvStatus.PUBLISHED);
+        return ResponseEntity.ok(cvs);
     }
 
     private Long resolveCurrentUserId(Authentication authentication) {

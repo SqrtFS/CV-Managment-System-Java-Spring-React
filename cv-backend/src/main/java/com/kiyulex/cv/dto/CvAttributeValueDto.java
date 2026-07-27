@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -27,6 +29,9 @@ public class CvAttributeValueDto {
     private Long optionId;
     private String optionValue;
     private String imageUrl;
+
+    @Builder.Default
+    private List<AttributeOptionDto> options = new ArrayList<>();
 
     private boolean empty;
 }

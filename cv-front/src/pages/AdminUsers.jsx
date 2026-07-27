@@ -117,12 +117,12 @@ const AdminUsers = () => {
                     </p>
                 </div>
 
-                <button
+                {/* <button
                     onClick={() => setShowCreateModal(true)}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium transition-all shadow-xs"
                 >
                     <UserPlus className="w-4 h-4" /> Create User
-                </button>
+                </button> */}
             </div>
 
             {/* Search & Stats */}

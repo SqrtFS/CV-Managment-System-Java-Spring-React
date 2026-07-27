@@ -17,6 +17,7 @@ import com.kiyulex.cv.repository.RecentlyUsedAttributeRepository;
 import com.kiyulex.cv.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -118,6 +119,7 @@ public class AttributeService {
 
         return attributeMapper.toDto(attributeRepository.save(attribute));
     }
+
     @Transactional
     public void deleteAttribute(Long id) {
         if (!attributeRepository.existsById(id)) {
@@ -134,14 +136,21 @@ public class AttributeService {
     @Transactional
     public void markUsed(Long userId, Long attributeId) {
         RecentlyUsedAttributeId id = new RecentlyUsedAttributeId(userId, attributeId);
-        RecentlyUsedAttribute usage = recentlyUsedRepository.findById(id).orElseGet(() -> {
-            RecentlyUsedAttribute u = new RecentlyUsedAttribute();
-            u.setUser(userRepository.getReferenceById(userId));
-            u.setAttribute(attributeRepository.getReferenceById(attributeId));
-            return u;
-        });
-        usage.setUsedAt(Instant.now());
-        recentlyUsedRepository.save(usage);
+        try {
+            RecentlyUsedAttribute usage = recentlyUsedRepository.findById(id).orElseGet(() -> {
+                RecentlyUsedAttribute u = new RecentlyUsedAttribute();
+                u.setUser(userRepository.getReferenceById(userId));
+                u.setAttribute(attributeRepository.getReferenceById(attributeId));
+                return u;
+            });
+            usage.setUsedAt(Instant.now());
+            recentlyUsedRepository.save(usage);
+        } catch (DataIntegrityViolationException e) {
+            recentlyUsedRepository.findById(id).ifPresent(u -> {
+                u.setUsedAt(Instant.now());
+                recentlyUsedRepository.save(u);
+            });
+        }
     }
 
     public List<AttributeDto> getRecentlyUsed(Long userId, int limit) {

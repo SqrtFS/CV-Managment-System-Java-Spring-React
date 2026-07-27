@@ -13,6 +13,7 @@ public interface CvAttributeValueMapper {
     @Mapping(source = "attribute.id", target = "attributeId")
     @Mapping(source = "attribute.name", target = "attributeName")
     @Mapping(source = "attribute.dataType", target = "dataType")
+    @Mapping(source = "attribute.options", target = "options")
     @Mapping(source = "option.id", target = "optionId")
     @Mapping(source = "option.value", target = "optionValue")
     @Mapping(target = "required", ignore = true)

@@ -1,5 +1,6 @@
 package com.kiyulex.cv.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,6 +20,8 @@ public class PositionDto {
     private String shortDescription;
     private String company;
     private String level;
+
+    @JsonProperty("isPublic")
     private boolean isPublic;
     private Integer maxProjects;
     private Long createdByUserId;

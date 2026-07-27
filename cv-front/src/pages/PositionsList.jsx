@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Copy } from "lucide-react";
+import { Plus, Copy, Trash2 } from "lucide-react";
 import { api } from "../util/api";
 import { useUserProfile } from "../context/UserProfileContext";
+
 
 const PositionsList = () => {
   const [positions, setPositions] = useState([]);
@@ -15,7 +16,8 @@ const PositionsList = () => {
     api.positions.getAll({ page: 0, size: 50 }).then((res) => setPositions(res.data.content || []));
   };
 
-  useEffect(() => { load(); }, []);
+
+  useEffect(() => { load();}, []);
 
   const toggleSelect = (id) => {
     setSelected((prev) => {
@@ -31,37 +33,59 @@ const PositionsList = () => {
   };
 
   const handleDuplicate = async () => {
-    const [id] = selected;
-    if (!id) return;
-    await api.positions.duplicate(id);
+  if (selected.size === 0) return;
+  
+  try {
+    await Promise.all(Array.from(selected).map((id) => api.positions.duplicate(id)));    
     setSelected(new Set());
     load();
+  } catch (e) {
+    alert("Failed to duplicate one or more positions.");
+  }
+};
+
+
+  const handleDeleteSelected = async () => {
+    if (selected.size === 0) return;
+    if (!confirm(`Delete ${selected.size} selected position(s)?`)) return;
+    try {
+      await Promise.all(Array.from(selected).map((id) => api.positions.delete(id)));
+      setSelected(new Set());
+      load();
+    } catch (e) {
+      alert("Failed to delete one or more positions.");
+    }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">Positions</h1>
-
         {canManage && (
           <div className="flex gap-2">
-            {selected.size === 1 && (
+            {selected.size >= 1 && (
               <button
-                onClick={handleDuplicate}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-slate-700 hover:bg-gray-50 text-sm font-medium"
+                onClick={handleDeleteSelected}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-sm font-medium"
               >
-                <Copy className="w-4 h-4" /> Duplicate
+                <Trash2 className="w-4 h-4" /> Delete ({selected.size})
               </button>
             )}
-            <button
-              onClick={handleCreate}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm font-medium"
-            >
+            {selected.size >=  1 && (
+              <button onClick={handleDuplicate} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-slate-700 hover:bg-gray-50 text-sm font-medium">
+                <Copy className="w-4 h-4" /> Duplicate ({selected.size})
+              </button>
+            )}
+            <button onClick={handleCreate} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm font-medium">
               <Plus className="w-4 h-4" /> New Position
             </button>
           </div>
         )}
+
       </div>
+
+
+
 
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
@@ -94,8 +118,8 @@ const PositionsList = () => {
                 <td className="p-4 text-gray-500">{p.company || "—"}</td>
                 <td className="p-4 text-gray-500">{p.level || "—"}</td>
                 <td className="p-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.public ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-600"}`}>
-                    {p.public ? "Public" : "Restricted"}
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.isPublic ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-600"}`}>
+                    {p.isPublic ? "Public" : "Restricted"}
                   </span>
                 </td>
               </tr>

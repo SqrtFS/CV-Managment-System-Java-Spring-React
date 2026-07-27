@@ -21,7 +21,7 @@ import { useUserProfile } from "../context/UserProfileContext";
 const CvEditor = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user, isRecruiter, isAdmin } = useUserProfile();
+    const { profile: user, isRecruiter, isAdmin } = useUserProfile();
     const canManageAll = isRecruiter || isAdmin;
 
     const [cv, setCv] = useState(null);
@@ -33,15 +33,17 @@ const CvEditor = () => {
     const [availableProjects, setAvailableProjects] = useState([]);
 
     const loadCv = useCallback(async () => {
+        if (!user?.id) return;
+
         try {
-            const res = await api.cvs.getById(id, user.id, canManageAll);
+            const res = await api.cvs.getById(id);
             setCv(res.data);
         } catch (e) {
             setErrorMsg("Failed to load CV or access denied.");
         } finally {
             setLoading(false);
         }
-    }, [id, user.id, canManageAll]);
+    }, [id, user?.id, canManageAll]);
 
     useEffect(() => {
         loadCv();
@@ -49,7 +51,7 @@ const CvEditor = () => {
 
     const handleAttributeChange = async (attributeId, payload) => {
         try {
-            const res = await api.cvs.editAttributeValue(cv.id, attributeId, payload);
+            const res = await api.cvs.editAttribute(cv.id, attributeId, payload);
             setCv(res.data);
         } catch (e) {
             alert("Failed to update attribute value.");
@@ -102,7 +104,7 @@ const CvEditor = () => {
         <div className="space-y-6 max-w-6xl mx-auto pb-12">
             <div className="flex items-center justify-between">
                 <button
-                    onClick={() => navigate("/cvs")}
+                    onClick={() => navigate("/dashboard/cvs")}
                     className="flex items-center gap-2 text-sm text-gray-500 hover:text-navy-900 transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" /> Back to CVs
@@ -110,9 +112,8 @@ const CvEditor = () => {
 
                 <div className="flex items-center gap-3">
                     <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 ${
-                            isPublished ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
-                        }`}
+                        className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 ${isPublished ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                            }`}
                     >
                         {isPublished ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
                         {isPublished ? "Published" : "Draft Mode"}
@@ -178,14 +179,14 @@ const CvEditor = () => {
                                 </p>
                             </div>
 
-                            {!canManageAll && (
+                            {/* {!canManageAll && (
                                 <button
                                     onClick={handleOpenProjectsModal}
                                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-medium text-navy-900 hover:bg-gray-50"
                                 >
                                     <FolderPlus className="w-3.5 h-3.5" /> Manage Projects
                                 </button>
-                            )}
+                            )} */}
                         </div>
 
                         <div className="space-y-3">
@@ -241,15 +242,14 @@ const CvEditor = () => {
                                 <div
                                     className="bg-amber-500 h-full transition-all duration-300"
                                     style={{
-                                        width: `${
-                                            requiredAttrs.length
+                                        width: `${requiredAttrs.length
                                                 ? Math.round(
-                                                      ((requiredAttrs.length - missingRequired.length) /
-                                                          requiredAttrs.length) *
-                                                          100
-                                                  )
+                                                    ((requiredAttrs.length - missingRequired.length) /
+                                                        requiredAttrs.length) *
+                                                    100
+                                                )
                                                 : 100
-                                        }%`
+                                            }%`
                                     }}
                                 />
                             </div>
@@ -412,7 +412,7 @@ const AttributeFieldRow = ({ attrVal, disabled, onChange }) => {
                     <option value="">-- Select option --</option>
                     {attrVal.options?.map((opt) => (
                         <option key={opt.id} value={opt.id}>
-                            {opt.name}
+                            {opt.value}
                         </option>
                     ))}
                 </select>
@@ -445,11 +445,10 @@ const ProjectsSelectorModal = ({ attachedProjectIds, availableProjects, onClose,
                         availableProjects.map((p) => (
                             <label
                                 key={p.id}
-                                className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
-                                    selected.includes(p.id)
+                                className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${selected.includes(p.id)
                                         ? "border-amber-500/50 bg-amber-50/30"
                                         : "border-gray-100 hover:bg-gray-50"
-                                }`}
+                                    }`}
                             >
                                 <input
                                     type="checkbox"

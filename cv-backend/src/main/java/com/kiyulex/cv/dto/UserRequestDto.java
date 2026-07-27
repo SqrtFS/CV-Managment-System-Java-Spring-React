@@ -19,7 +19,6 @@ import java.util.List;
 @Builder
 public class UserRequestDto {
 
-    @NotBlank(message = "clerkId is required")
     private String clerkId;
 
     @NotBlank(message = "Email is required !")

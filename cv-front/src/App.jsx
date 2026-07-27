@@ -16,6 +16,8 @@ import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
 import DashboardLayout from "./layout/DashboardLayout.jsx";
 import Profile from "./pages/Profile.jsx";
 import AdminUsers from "./pages/AdminUsers.jsx";
+import SearchResults from "./pages/SearchResults.jsx";
+import AttributeLibrary from "./pages/AttributeLibrary.jsx";
 
 
 const App = () => {
@@ -42,6 +44,8 @@ const App = () => {
               <Route path="cvs/:id" element={<CvEditor />} />
               <Route path="profile" element={<Profile />} />
               <Route path="admin/users" element={<AdminUsers />} />
+              <Route path="search" element={<SearchResults />} />
+              <Route path="attributes" element={<AttributeLibrary />} />
             </Route>
 
             <Route path="/*" element={<RedirectToSignIn />} />

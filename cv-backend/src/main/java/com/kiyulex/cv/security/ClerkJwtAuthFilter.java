@@ -106,9 +106,13 @@ public class ClerkJwtAuthFilter extends OncePerRequestFilter {
     private boolean isPublicPath(String path, String method) {
         boolean isPublicPositionsRead =
                 "GET".equals(method)
-                        && path.startsWith("/positions")
-                        && !path.endsWith("/access-check");
+                        && (path.equals("/positions")
+                        || path.matches("^/positions/\\d+$")
+                        || path.equals("/positions/latest"));
 
-        return path.contains("/webhooks/") || isPublicPositionsRead || path.contains("/main-page");
+        return path.contains("/webhooks/")
+                || isPublicPositionsRead
+                || path.contains("/main-page")
+                || path.startsWith("/ws");
     }
 }

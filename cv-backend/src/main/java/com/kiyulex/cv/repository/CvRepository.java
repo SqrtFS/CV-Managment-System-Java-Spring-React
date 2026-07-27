@@ -22,4 +22,8 @@ public interface CvRepository extends JpaRepository<Cv, Long> {
         OR LOWER(cand.lastName) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%')))
     """)
     List<Cv> search(@Param("query") String query);
+
+    @Query("SELECT c FROM Cv c LEFT JOIN FETCH c.likes WHERE c.position.id = :positionId AND c.status = :status")
+    List<Cv> findAllByPositionIdAndStatus(@Param("positionId") Long positionId, @Param("status") CvStatus status);
+
 }

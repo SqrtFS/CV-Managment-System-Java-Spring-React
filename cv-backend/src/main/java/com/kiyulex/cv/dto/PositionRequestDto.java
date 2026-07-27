@@ -1,5 +1,6 @@
 package com.kiyulex.cv.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -22,6 +23,7 @@ public class PositionRequestDto {
 
     private String level;
 
+    @JsonProperty("isPublic")
     private boolean isPublic;
 
     @Min(value = 1, message = "maxProjects must be at least 1")

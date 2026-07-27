@@ -19,6 +19,7 @@ import { useUserProfile } from "../context/UserProfileContext";
 const CvList = () => {
     const navigate = useNavigate();
     const { profile: user, isCandidate, isRecruiter, isAdmin } = useUserProfile();
+
     const canManageAll = isRecruiter || isAdmin;
 
     const [cvs, setCvs] = useState([]);
@@ -29,28 +30,21 @@ const CvList = () => {
     const [showCreateModal, setShowCreateModal] = useState(false);
 
     const loadCvs = useCallback(async () => {
-        if (!canManageAll && !user?.id) {
-            return;
-        }
-
+        if (canManageAll) return;
         setLoading(true);
         try {
-            const res = canManageAll 
-                ? await api.cvs.getAll() 
-                : await api.cvs.listByCandidate(user.id);
+            const res = await api.cvs.getMine();
             setCvs(res.data || []);
         } catch (e) {
             console.error("Failed to load CVs", e);
         } finally {
             setLoading(false);
         }
-    }, [user?.id, canManageAll]);
+    }, [canManageAll]);
 
     useEffect(() => {
-        if (canManageAll || user?.id) {
-            loadCvs();
-        }
-    }, [user, canManageAll, loadCvs]);
+        loadCvs();
+    }, [loadCvs]);
 
     const handleDelete = async (e, cvId) => {
         e.stopPropagation();
@@ -66,14 +60,11 @@ const CvList = () => {
     const handleToggleLike = async (e, cv) => {
         e.stopPropagation();
         try {
-            const newCount = cv.likedByMe
-                ? await api.likes.unlike(cv.id)
-                : await api.likes.like(cv.id);
-
+            const res = cv.likedByMe ? await api.cvs.unlike(cv.id) : await api.cvs.like(cv.id);
             setCvs((prev) =>
                 prev.map((c) =>
                     c.id === cv.id
-                        ? { ...c, likesCount: newCount.data ?? newCount, likedByMe: !c.likedByMe }
+                        ? { ...c, likesCount: res.data.likesCount, likedByMe: !c.likedByMe }
                         : c
                 )
             );
@@ -89,25 +80,33 @@ const CvList = () => {
         return matchesSearch && matchesStatus;
     });
 
+    if (canManageAll) {
+        return (
+            <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center max-w-md mx-auto">
+                <FileText className="w-12 h-12 text-amber-500/40 mx-auto mb-3" />
+                <h3 className="font-semibold text-navy-900">Use search to find CVs</h3>
+                <p className="text-gray-400 text-sm mt-1">
+                    As a recruiter/admin, browse CVs via a position's "CVs" tab or the header search.
+                </p>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6 max-w-7xl mx-auto">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-navy-900">Curriculum Vitae</h1>
-                    <p className="text-gray-500 text-sm mt-1">
-                        {canManageAll ? "Browse and evaluate candidate CVs" : "Manage your tailored CVs for positions"}
-                    </p>
+                    <p className="text-gray-500 text-sm mt-1">Manage your tailored CVs for positions</p>
                 </div>
 
-                {!canManageAll && (
-                    <button
-                        onClick={() => setShowCreateModal(true)}
-                        disabled={!user?.id}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-sm font-medium shadow-sm transition-all"
-                    >
-                        <Plus className="w-4 h-4" /> Create CV
-                    </button>
-                )}
+                <button
+                    onClick={() => setShowCreateModal(true)}
+                    disabled={!user?.id}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-sm font-medium shadow-sm transition-all"
+                >
+                    <Plus className="w-4 h-4" /> Create CV
+                </button>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
@@ -154,27 +153,24 @@ const CvList = () => {
                         <CvCard
                             key={cv.id}
                             cv={cv}
-                            canManageAll={canManageAll}
-                            onOpen={() => navigate(`/cvs/${cv.id}`)}
+                            onOpen={() => navigate(`/dashboard/cvs/${cv.id}`)}
                             onDelete={(e) => handleDelete(e, cv.id)}
-                            onLike={(e) => handleToggleLike(e, cv)}
                         />
                     ))}
                 </div>
             )}
 
-            {showCreateModal && user?.id && (
+            {showCreateModal && (
                 <CreateCvModal
-                    candidateId={user.id}
                     onClose={() => setShowCreateModal(false)}
-                    onCreated={(newCvId) => navigate(`/cvs/${newCvId}`)}
+                    onCreated={(newCvId) => navigate(`/dashboard/cvs/${newCvId}`)}
                 />
             )}
         </div>
     );
 };
 
-const CvCard = ({ cv, canManageAll, onOpen, onDelete, onLike }) => {
+const CvCard = ({ cv, onOpen, onDelete }) => {
     const isPublished = cv.status === "PUBLISHED";
     const requiredCount = cv.attributeValues?.filter((a) => a.required).length || 0;
     const filledRequiredCount = cv.attributeValues?.filter((a) => a.required && !a.empty).length || 0;
@@ -195,29 +191,14 @@ const CvCard = ({ cv, canManageAll, onOpen, onDelete, onLike }) => {
                         {isPublished ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                         {isPublished ? "Published" : "Draft"}
                     </span>
-
-                    {canManageAll && (
-                        <button
-                            onClick={onLike}
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
-                                cv.likedByMe
-                                    ? "bg-peach-100 border-coral-600/30 text-coral-600"
-                                    : "border-gray-200 text-gray-500 hover:bg-gray-50"
-                            }`}
-                        >
-                            <Heart className={`w-3.5 h-3.5 ${cv.likedByMe ? "fill-coral-600 text-coral-600" : ""}`} />
-                            {cv.likesCount || 0}
-                        </button>
-                    )}
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border border-gray-200 text-gray-500">
+                        <Heart className="w-3.5 h-3.5" /> {cv.likesCount || 0}
+                    </span>
                 </div>
 
                 <h3 className="font-bold text-navy-900 text-lg group-hover:text-amber-600 transition-colors line-clamp-1">
                     {cv.positionTitle || "Untitled Position"}
                 </h3>
-
-                {canManageAll && (
-                    <p className="text-xs text-gray-500 font-medium mt-0.5">Candidate: {cv.candidateFullName}</p>
-                )}
 
                 <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
                     <div className="flex justify-between text-xs text-gray-500">
@@ -226,7 +207,6 @@ const CvCard = ({ cv, canManageAll, onOpen, onDelete, onLike }) => {
                             {filledRequiredCount} / {requiredCount}
                         </span>
                     </div>
-
                     <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
                         <div
                             className={`h-full transition-all duration-300 ${
@@ -240,17 +220,14 @@ const CvCard = ({ cv, canManageAll, onOpen, onDelete, onLike }) => {
 
             <div className="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
                 <span>Updated {new Date(cv.updatedAt || Date.now()).toLocaleDateString()}</span>
-
                 <div className="flex items-center gap-1">
-                    {!canManageAll && (
-                        <button
-                            onClick={onDelete}
-                            className="p-1.5 text-gray-400 hover:text-coral-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete CV"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-                    )}
+                    <button
+                        onClick={onDelete}
+                        className="p-1.5 text-gray-400 hover:text-coral-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete CV"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
                     <span className="text-navy-900 group-hover:translate-x-0.5 transition-transform font-medium flex items-center gap-0.5 ml-1">
                         Edit <ChevronRight className="w-3.5 h-3.5" />
                     </span>
@@ -260,7 +237,7 @@ const CvCard = ({ cv, canManageAll, onOpen, onDelete, onLike }) => {
     );
 };
 
-const CreateCvModal = ({ candidateId, onClose, onCreated }) => {
+const CreateCvModal = ({ onClose, onCreated }) => {
     const [positions, setPositions] = useState([]);
     const [selectedPositionId, setSelectedPositionId] = useState("");
     const [loadingPositions, setLoadingPositions] = useState(true);
@@ -269,7 +246,7 @@ const CreateCvModal = ({ candidateId, onClose, onCreated }) => {
 
     useEffect(() => {
         api.positions.getAll()
-            .then((res) => setPositions(res.data || []))
+            .then((res) => setPositions(res.data?.content || res.data || []))
             .catch(() => setError("Failed to load positions list"))
             .finally(() => setLoadingPositions(false));
     }, []);
@@ -279,7 +256,7 @@ const CreateCvModal = ({ candidateId, onClose, onCreated }) => {
         setCreating(true);
         setError("");
         try {
-            const res = await api.cvs.create(Number(selectedPositionId), candidateId);
+            const res = await api.cvs.create(Number(selectedPositionId));
             onCreated(res.data.id);
         } catch (err) {
             const msg = err.response?.data?.message || "Cannot create CV for this position.";

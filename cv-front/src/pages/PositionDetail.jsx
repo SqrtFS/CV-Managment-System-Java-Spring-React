@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { Plus, X, Send, Copy, Trash2, Save } from "lucide-react";
+import { Plus, X, Send, Copy, Trash2, Save , Heart} from "lucide-react";
 import { api } from "../util/api";
 import { useUserProfile } from "../context/UserProfileContext";
 import ReactMarkdown from "react-markdown";
 import { getStompClient } from "../util/ws";
+import { toast } from "react-hot-toast";
+import { useAuth } from "@clerk/clerk-react";
 
 const TABS = ["Overview", "Attributes", "Access Rules", "CVs", "Discussion"];
 
@@ -57,29 +59,29 @@ const PositionDetail = () => {
 /* ---------- Header ---------- */
 
 const PositionHeader = ({ position, canManage, onChange }) => {
-    const handleDuplicate = async () => {
-        await api.positions.duplicate(position.id);
-        onChange();
-    };
-    const handleDelete = async () => {
-        if (!confirm("Delete this position?")) return;
-        await api.positions.delete(position.id);
-        window.history.back();
-    };
+    // const handleDuplicate = async () => {
+    //     await api.positions.duplicate(position.id);
+    //     onChange();
+    // };
+    // const handleDelete = async () => {
+    //     if (!confirm("Delete this position?")) return;
+    //     await api.positions.delete(position.id);
+    //     window.history.back();
+    // };
 
     return (
         <div className="flex items-start justify-between">
             <div>
                 <div className="flex items-center gap-3">
                     <h1 className="text-2xl font-bold text-navy-900">{position.title}</h1>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${position.public ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-700"
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${position.isPublic ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-700"
                         }`}>
-                        {position.public ? "Public" : "Restricted"}
+                        {position.isPublic ? "Public" : "Restricted"}
                     </span>
                 </div>
                 <p className="text-gray-500 text-sm mt-1 max-w-2xl">{position.shortDescription}</p>
             </div>
-
+{/* 
             {canManage && (
                 <div className="flex gap-2 shrink-0">
                     <button onClick={handleDuplicate} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 text-sm text-navy-900 hover:bg-gray-50">
@@ -89,7 +91,7 @@ const PositionHeader = ({ position, canManage, onChange }) => {
                         <Trash2 className="w-4 h-4" /> Delete
                     </button>
                 </div>
-            )}
+            )} */}
         </div>
     );
 };
@@ -102,7 +104,7 @@ const OverviewTab = ({ position, canManage, onSaved }) => {
         shortDescription: position.shortDescription || "",
         company: position.company || "",
         level: position.level || "",
-        isPublic: position.public,
+        isPublic: position.isPublic ?? true,
         maxProjects: position.maxProjects ?? 3,
     });
     const [tagInput, setTagInput] = useState("");
@@ -113,10 +115,16 @@ const OverviewTab = ({ position, canManage, onSaved }) => {
         setSaving(true);
         try {
             await api.positions.update(position.id, { ...form, version: position.version });
-            await api.positions.setProjectTags(position.id, { tags });
+            await api.positions.setProjectTags(position.id, { tagNames: tags });
+            toast.success("Position updated successfully!");
             onSaved();
         } catch (e) {
-            if (e.response?.status === 409) alert("Someone else updated this position — refresh and retry.");
+            if (e.response?.status === 409) {
+                toast.error("Someone else updated this position — refresh and retry.");
+            } else {
+                toast.error(e.response?.data?.message || `Save failed: ${e.message}`);
+            }
+            console.error("Position save error:", e.response?.data || e);
         } finally {
             setSaving(false);
         }
@@ -214,6 +222,7 @@ const LabeledTextarea = ({ label, ...props }) => (
 
 const AttributesTab = ({ position, canManage, onSaved }) => {
     const [library, setLibrary] = useState([]);
+    const [recentlyUsed, setRecentlyUsed] = useState([]);
     const [prefix, setPrefix] = useState("");
     const [selected, setSelected] = useState(() => {
         const map = new Map();
@@ -225,15 +234,28 @@ const AttributesTab = ({ position, canManage, onSaved }) => {
         if (!canManage) return;
         const request = prefix ? api.attributes.search(null, prefix) : api.attributes.getAll();
         request.then((res) => setLibrary(res.data));
+        api.attributes.recentlyUsed(5).then((res) => setRecentlyUsed(res.data || []));
     }, [prefix, canManage]);
 
     const toggle = (attrId) => {
-        setSelected((prev) => {
-            const next = new Map(prev);
-            next.has(attrId) ? next.delete(attrId) : next.set(attrId, false);
-            return next;
+    const wasSelected = selected.has(attrId);
+
+    setSelected((prev) => {
+        const next = new Map(prev);
+        if (next.has(attrId)) {
+            next.delete(attrId);
+        } else {
+            next.set(attrId, false);
+        }
+        return next;
+    });
+
+    if (!wasSelected) {
+        api.attributes.markUsed(attrId).catch(() => {
+            toast.error("Failed to mark attribute as recently used");
         });
-    };
+    }
+};
 
     const toggleRequired = (attrId) => {
         setSelected((prev) => {
@@ -244,14 +266,19 @@ const AttributesTab = ({ position, canManage, onSaved }) => {
     };
 
     const save = async () => {
+    try {
         await api.positions.setAttributes(position.id, {
             attributes: Array.from(selected.entries()).map(([attributeId, required]) => ({
                 attributeId,
                 required,
             })),
         });
+        toast.success("Attributes updated successfully!");
         onSaved();
-    };
+    } catch (e) {
+        toast.error(e.response?.data?.message || "Failed to save attributes");
+    }
+};
 
     if (!canManage) {
         return (
@@ -277,6 +304,24 @@ const AttributesTab = ({ position, canManage, onSaved }) => {
                 <h3 className="font-semibold text-navy-900 mb-3 text-sm">Attribute library</h3>
                 <input value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="Search by prefix..."
                     className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mb-3" />
+
+                {recentlyUsed.length > 0 && !prefix && (
+                    <div className="mb-3 pb-3 border-b border-gray-100">
+                        <div className="text-[11px] font-semibold text-gray-400 uppercase mb-1.5">Recently used</div>
+                        <div className="flex flex-wrap gap-1.5">
+                            {recentlyUsed.map((a) => (
+                                <button
+                                    key={a.id}
+                                    onClick={() => toggle(a.id)}
+                                    className="px-2 py-1 rounded-lg bg-amber-50 text-amber-700 text-xs font-medium hover:bg-amber-100"
+                                >
+                                    {a.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <div className="max-h-96 overflow-y-auto space-y-1">
                     {library.map((a) => (
                         <label key={a.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 text-sm cursor-pointer">
@@ -340,10 +385,14 @@ const AccessRulesTab = ({ position, canManage, onSaved }) => {
     const removeRule = (i) => setRules(rules.filter((_, idx) => idx !== i));
 
     const save = async () => {
+    try {
         await api.positions.setAccessRules(position.id, { rules });
+        toast.success("Access rules updated successfully!");
         onSaved();
-    };
-
+    } catch (e) {
+        toast.error(e.response?.data?.message || "Failed to save access rules");
+    }
+};
     if (!canManage) {
         return <div className="text-sm text-gray-500">Access rules are managed by recruiters.</div>;
     }
@@ -352,22 +401,37 @@ const AccessRulesTab = ({ position, canManage, onSaved }) => {
         <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-3 max-w-3xl">
             {rules.length === 0 && <p className="text-sm text-gray-400">No restrictions — position is fully public.</p>}
             {rules.map((rule, i) => {
-                const attr = attrs.find((a) => a.id === rule.attributeId);
+                const attr = attrs.find((a) => a.id === Number(rule.attributeId));
                 const ops = OPERATORS_BY_TYPE[attr?.dataType] || [];
+
                 return (
                     <div key={i} className="flex items-center gap-2">
-                        <select value={rule.attributeId} onChange={(e) => updateRule(i, { attributeId: e.target.value, operator: "" })}
+                        <select value={rule.attributeId}
+                            onChange={(e) => updateRule(i, { attributeId: Number(e.target.value), operator: "", value: "" })}
                             className="border border-gray-200 rounded-xl px-3 py-2 text-sm flex-1">
                             <option value="">Select attribute...</option>
                             {attrs.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                         </select>
+
                         <select value={rule.operator} onChange={(e) => updateRule(i, { operator: e.target.value })}
                             className="border border-gray-200 rounded-xl px-3 py-2 text-sm w-40">
                             <option value="">Operator...</option>
                             {ops.map((o) => <option key={o} value={o}>{o}</option>)}
                         </select>
-                        <input value={rule.value} onChange={(e) => updateRule(i, { value: e.target.value })}
-                            placeholder="Value" className="border border-gray-200 rounded-xl px-3 py-2 text-sm w-32" />
+
+                        {attr?.dataType === "ENUM" ? (
+                            <select value={rule.value} onChange={(e) => updateRule(i, { value: e.target.value })}
+                                className="border border-gray-200 rounded-xl px-3 py-2 text-sm w-32">
+                                <option value="">Value...</option>
+                                {attr.options?.map((o) => (
+                                    <option key={o.id} value={o.value}>{o.value}</option>
+                                ))}
+                            </select>
+                        ) : attr?.dataType === "BOOLEAN" ? null /* IS_TRUE/IS_FALSE не требуют value */ : (
+                            <input value={rule.value} onChange={(e) => updateRule(i, { value: e.target.value })}
+                                placeholder="Value" className="border border-gray-200 rounded-xl px-3 py-2 text-sm w-32" />
+                        )}
+
                         <X className="w-4 h-4 text-gray-400 cursor-pointer" onClick={() => removeRule(i)} />
                     </div>
                 );
@@ -386,11 +450,145 @@ const AccessRulesTab = ({ position, canManage, onSaved }) => {
 
 /* ---------- CVs list for this position (Recruiter/Admin only) ---------- */
 
+// const PositionCvsTab = ({ positionId }) => {
+//     const [cvs, setCvs] = useState([]);
+//     const [loading, setLoading] = useState(true);
+
+//     useEffect(() => {
+//         api.positions.getCvs(positionId)
+//             .then((res) => {
+//                 setCvs(res.data || []);
+//             })
+//             .catch((err) => {
+//                 console.error("Failed to fetch CVs:", err);
+//             })
+//             .finally(() => setLoading(false));
+//     }, [positionId]);
+
+//     const handleLikeToggle = async (cv) => {
+//         const isLiked = cv.isLiked || cv.likedByMe; 
+
+        
+//         setCvs((prev) =>
+//             prev.map((item) => {
+//                 if (item.id === cv.id) {
+//                     return {
+//                         ...item,
+//                         isLiked: !isLiked,
+//                         likedByMe: !isLiked,
+//                         likesCount: isLiked ? (item.likesCount || 1) - 1 : (item.likesCount || 0) + 1,
+//                     };
+//                 }
+//                 return item;
+//             })
+//         );
+
+       
+//         try {
+//             if (isLiked) {
+//                 await api.cvs.unlike(cv.id);
+//             } else {
+//                 await api.cvs.like(cv.id);
+//             }
+//         } catch (err) {
+//             console.error("Failed to toggle like:", err);
+//             toast.error("Failed to update like status");
+            
+    
+//             setCvs((prev) =>
+//                 prev.map((item) => {
+//                     if (item.id === cv.id) {
+//                         return {
+//                             ...item,
+//                             isLiked: isLiked,
+//                             likedByMe: isLiked,
+//                             likesCount: cv.likesCount ?? 0,
+//                         };
+//                     }
+//                     return item;
+//                 })
+//             );
+//         }
+//     };
+
+//     if (loading) {
+//         return <div className="p-6 text-gray-400">Loading CVs...</div>;
+//     }
+
+//     return (
+//         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+//             <table className="w-full text-sm">
+//                 <thead className="bg-gray-50 text-gray-500">
+//                     <tr className="text-left">
+//                         <th className="p-4 font-medium">Candidate</th>
+//                         <th className="p-4 font-medium">Status</th>
+//                         <th className="p-4 font-medium">Likes</th>
+//                     </tr>
+//                 </thead>
+//                 <tbody>
+//                     {cvs.map((cv) => {
+//                         const isLiked = cv.isLiked || cv.likedByMe;
+//                         return (
+//                             <tr key={cv.id} className="border-t border-gray-100 hover:bg-gray-50/50">
+//                                 <td className="p-4 font-medium text-navy-900">
+//                                     {cv.candidateFullName || cv.candidateName}
+//                                 </td>
+//                                 <td className="p-4">
+//                                     <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-600">
+//                                         {cv.status || "PUBLISHED"}
+//                                     </span>
+//                                 </td>
+//                                 <td className="p-4">
+//                                     <button
+//                                         onClick={() => handleLikeToggle(cv)}
+//                                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+//                                             isLiked
+//                                                 ? "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100"
+//                                                 : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+//                                         }`}
+//                                     >
+//                                         <Heart
+//                                             className={`w-4 h-4 transition-transform active:scale-125 ${
+//                                                 isLiked ? "fill-rose-500 text-rose-500" : "text-gray-400"
+//                                             }`}
+//                                         />
+//                                         <span>{cv.likesCount ?? 0}</span>
+//                                     </button>
+//                                 </td>
+//                             </tr>
+//                         );
+//                     })}
+//                     {cvs.length === 0 && (
+//                         <tr>
+//                             <td colSpan={3} className="p-6 text-center text-gray-400">
+//                                 No CVs yet
+//                             </td>
+//                         </tr>
+//                     )}
+//                 </tbody>
+//             </table>
+//         </div>
+//     );
+// };
+
 const PositionCvsTab = ({ positionId }) => {
     const [cvs, setCvs] = useState([]);
+    const [loading, setLoading] = useState(true);
+
     useEffect(() => {
-        api.positions.getById(positionId).then((res) => setCvs(res.data.cvs || []));
+        api.positions.getCvs(positionId)
+            .then((res) => {
+                setCvs(res.data || []);
+            })
+            .catch((err) => {
+                console.error("Failed to fetch CVs:", err);
+            })
+            .finally(() => setLoading(false));
     }, [positionId]);
+
+    if (loading) {
+        return <div className="p-6 text-gray-400">Loading CVs...</div>;
+    }
 
     return (
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -405,31 +603,34 @@ const PositionCvsTab = ({ positionId }) => {
                 <tbody>
                     {cvs.map((cv) => (
                         <tr key={cv.id} className="border-t border-gray-100 hover:bg-gray-50/50">
-                            <td className="p-4 font-medium text-navy-900">{cv.candidateName}</td>
+                            <td className="p-4 font-medium text-navy-900">{cv.candidateFullName}</td>
                             <td className="p-4">
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cv.published ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-500"
-                                    }`}>
-                                    {cv.published ? "Published" : "Draft"}
+                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-600">
+                                    {cv.status || "PUBLISHED"}
                                 </span>
                             </td>
-                            <td className="p-4 text-gray-500">{cv.likesCount}</td>
+                            <td className="p-4 text-gray-500">{cv.likesCount ?? 0}</td>
                         </tr>
                     ))}
                     {cvs.length === 0 && (
-                        <tr><td colSpan={3} className="p-6 text-center text-gray-400">No CVs yet</td></tr>
+                        <tr>
+                            <td colSpan={3} className="p-6 text-center text-gray-400">
+                                No CVs yet
+                            </td>
+                        </tr>
                     )}
                 </tbody>
             </table>
         </div>
     );
-};
-
+}; 
 /* ---------- Discussion (polling every 3s; swap to WS once endpoint confirmed) ---------- */
 
 const DiscussionTab = ({ positionId }) => {
     const [posts, setPosts] = useState([]);
     const [text, setText] = useState("");
     const subRef = useRef(null);
+    const { getToken } = useAuth();
 
     const load = useCallback(() => {
         api.discussions.list(positionId).then((res) => setPosts(res.data));
@@ -438,7 +639,7 @@ const DiscussionTab = ({ positionId }) => {
     useEffect(() => {
         load();
 
-        const client = getStompClient();
+        const client = getStompClient(getToken);
 
         const subscribe = () => {
             subRef.current = client.subscribe(
@@ -474,7 +675,7 @@ const DiscussionTab = ({ positionId }) => {
                     <div key={p.id} className="text-sm">
                         <div className="flex items-center gap-2 mb-1">
                             <span className="font-medium text-navy-900">{p.authorName}</span>
-                            <span className="text-gray-400 text-xs">{new Date(p.timestamp).toLocaleString()}</span>
+                            <span className="text-gray-400 text-xs">{new Date(p.createdAt).toLocaleString()}</span>
                         </div>
                         <div className="text-gray-600 prose prose-sm max-w-none">
                             <ReactMarkdown>{p.content}</ReactMarkdown>

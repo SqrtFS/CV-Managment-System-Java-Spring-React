@@ -182,6 +182,19 @@ public class CvService {
         cvRepository.delete(cv);
     }
 
+    public List<CvDto> getCvsByPositionAndStatus(Long positionId, CvStatus status) {
+        List<Cv> cvs = cvRepository.findAllByPositionIdAndStatus(positionId, status);
+
+        return cvs.stream().map(cv -> {
+            CvDto dto = new CvDto();
+            dto.setId(cv.getId());
+            dto.setCandidateFullName(cv.getCandidate().getFirstName() + " " + cv.getCandidate().getLastName());
+            dto.setStatus(cv.getStatus().name());
+            dto.setLikesCount(cv.getLikes().size());
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
     // ---------- helpers ----------
 
     private Cv getEntity(Long id) {

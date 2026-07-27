@@ -32,7 +32,7 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/webhooks/**" , "/error" , "/positions/**" , "/main-page/**").permitAll()
+                        .requestMatchers("/webhooks/**" , "/error" , "/positions/**" , "/main-page/**" ,  "/ws/**").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(clerkJwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

@@ -3,6 +3,7 @@ package com.kiyulex.cv.repository;
 import com.kiyulex.cv.entity.RoleName;
 import com.kiyulex.cv.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
