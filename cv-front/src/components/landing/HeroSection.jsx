@@ -15,7 +15,7 @@ const HeroSection = ({ openSignUp, openSignIn }) => {
 
     return (
         <>
-            <div className="flex items-center justify-between gap-5 backdrop-blur-[2px] p-4 sticky top-0 z-30 max-w-7xl mx-auto py-10">
+            <div className="sm:py-0 flex items-center justify-between gap-5 backdrop-blur-[2px] p-4 sticky top-0 z-30 max-w-7xl mx-auto md:py-5 lg:py-10">
                 <div className="flex items-center gap-5">
                     <div className="flex items-center gap-2">
                         <Vegan className="text-amber-300" />
@@ -71,7 +71,7 @@ const HeroSection = ({ openSignUp, openSignIn }) => {
                 </div>
             </div>
 
-            <section className="relative pt-32 pb-20 lg:pt-33 lg:pb-33 px-6 max-w-7xl mx-auto flex flex-col-reverse lg:flex-row items-center gap-12">
+            <section className="relative pt-32 pb-20 lg:pt-20 lg:pb-20 px-6 max-w-7xl mx-auto flex flex-col-reverse lg:flex-row items-center gap-12">
                 <div className="flex-1 text-center lg:text-left z-10">
                     <h3 className="text-orange-500 font-bold uppercase tracking-widest text-sm mb-4">
                         {t('hero.subtitle', 'Best ATS Platform')}
